@@ -102,6 +102,147 @@ const fmtTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).
 const fmtDate = (ts) => ts?.toDate ? ts.toDate().toLocaleDateString() : 'Just now';
 const getHour  = (ts) => ts?.toDate ? ts.toDate().getHours() : new Date().getHours();
 
+// ─── RATING MODAL (outside App to prevent remount on every render) ────────────
+function RatingModal({ show, darkMode, card, pendingRating, setPendingRating,
+  heartRate, setHeartRate, weight, setWeight, notes, setNotes,
+  onSave, onSkip }) {
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-4"
+        >
+          <motion.div
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+            className={`${card} rounded-[32px] p-6 w-full max-w-md`}
+          >
+            <h2 className="font-display text-2xl font-black mb-1">Workout Complete! 🎉</h2>
+            <p className="opacity-60 text-sm mb-6">How did it feel?</p>
+
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              {[
+                { key: 'easy',   emoji: '😊', label: 'Easy',   color: 'from-green-400 to-emerald-500' },
+                { key: 'medium', emoji: '😤', label: 'Medium', color: 'from-yellow-400 to-orange-500' },
+                { key: 'hard',   emoji: '🥵', label: 'Hard',   color: 'from-red-400 to-rose-600' }
+              ].map(r => (
+                <button
+                  key={r.key}
+                  onClick={() => setPendingRating(r.key)}
+                  className={`py-4 rounded-2xl font-bold transition-all ${pendingRating === r.key ? `bg-gradient-to-br ${r.color} text-white scale-105 shadow-lg` : darkMode ? 'bg-white/10' : 'bg-white/50'}`}
+                >
+                  <div className="text-2xl">{r.emoji}</div>
+                  <div className="text-xs mt-1">{r.label}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div>
+                <label className="text-xs opacity-60 mb-1 flex items-center gap-1"><Heart size={12}/> Heart Rate (bpm)</label>
+                <input
+                  type="number"
+                  value={heartRate}
+                  onChange={e => setHeartRate(e.target.value)}
+                  placeholder="e.g. 130"
+                  className={`w-full px-4 py-2 rounded-xl text-sm ${darkMode ? 'bg-white/10 text-white' : 'bg-white/70 text-slate-900'} outline-none border border-transparent focus:border-violet-400`}
+                />
+              </div>
+              <div>
+                <label className="text-xs opacity-60 mb-1 flex items-center gap-1"><Weight size={12}/> Weight (kg)</label>
+                <input
+                  type="number"
+                  value={weight}
+                  onChange={e => setWeight(e.target.value)}
+                  placeholder="e.g. 68.5"
+                  className={`w-full px-4 py-2 rounded-xl text-sm ${darkMode ? 'bg-white/10 text-white' : 'bg-white/70 text-slate-900'} outline-none border border-transparent focus:border-violet-400`}
+                />
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="text-xs opacity-60 mb-1 block">Notes (optional)</label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="How did it go? Any aches, wins, etc."
+                rows={2}
+                className={`w-full px-4 py-2 rounded-xl text-sm resize-none ${darkMode ? 'bg-white/10 text-white' : 'bg-white/70 text-slate-900'} outline-none border border-transparent focus:border-violet-400`}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={onSkip}
+                className="flex-1 py-3 rounded-2xl font-bold opacity-60 hover:opacity-100 transition border border-current"
+              >
+                Skip
+              </button>
+              <button
+                onClick={onSave}
+                disabled={!pendingRating}
+                className={`flex-1 py-3 rounded-2xl font-bold text-white transition ${pendingRating ? 'bg-gradient-to-r from-violet-500 to-blue-500 hover:scale-105' : 'bg-gray-400 cursor-not-allowed'}`}
+              >
+                Save Workout
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─── PROFILE AVATAR (outside App to prevent remount on every render) ──────────
+function ProfileAvatar({ user, size = 'w-16 h-16', textSize = 'text-2xl', border = 'border-4 border-white/30' }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  if (!imgFailed && user.photoURL) {
+    return (
+      <img
+        src={user.photoURL}
+        alt="avatar"
+        className={`${size} rounded-full ${border} object-cover`}
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className={`${size} rounded-full ${border} bg-white/20 flex items-center justify-center ${textSize} font-black`}>
+      {user.displayName?.charAt(0).toUpperCase() || '?'}
+    </div>
+  );
+}
+
+// ─── BOTTOM NAV (outside App to prevent remount on every render) ──────────────
+const navItems = [
+  { id: 'timer',     icon: <Timer size={18}/>,        label: 'Timer'    },
+  { id: 'dashboard', icon: <Activity size={18}/>,     label: 'Stats'    },
+  { id: 'calendar',  icon: <CalendarDays size={18}/>, label: 'Calendar' },
+  { id: 'profile',   icon: <User size={18}/>,         label: 'Profile'  },
+  { id: 'settings',  icon: <Settings size={18}/>,     label: 'Settings' },
+];
+
+function BottomNav({ view, setView, card }) {
+  return (
+    <div className={`fixed bottom-4 left-4 right-4 ${card} rounded-full p-2 flex justify-around z-40`}>
+      {navItems.map(n => (
+        <button
+          key={n.id}
+          onClick={() => setView(n.id)}
+          className={`flex flex-col items-center px-3 py-2 rounded-full text-xs gap-1 transition-all ${view === n.id ? 'bg-gradient-to-r from-violet-500 to-blue-500 text-white' : 'opacity-50 hover:opacity-100'}`}
+        >
+          {n.icon}
+          <span className="hidden sm:block">{n.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('timer');
@@ -153,7 +294,6 @@ function App() {
         if (s.slowDuration)                 setSlowDuration(s.slowDuration);
         if (s.sessionMinutes)               setSessionMinutes(s.sessionMinutes);
         if (s.weeklyGoal)                   setWeeklyGoal(s.weeklyGoal);
-        // Update timer to reflect loaded session length (only if not running)
         if (s.sessionMinutes && !isRunning) setTotalTime(s.sessionMinutes * 60);
         if (s.slowDuration)                 setPhaseTime(s.slowDuration);
       }
@@ -168,7 +308,6 @@ function App() {
         await loadUserSettings(u.uid);
         fetchWorkouts(u.uid);
       } else {
-        // Reset everything on sign out
         setIsRunning(false);
         setTotalTime(SESSION_DEFAULT);
         setPhaseTime(90);
@@ -179,7 +318,6 @@ function App() {
         setXp(0);
         setLevel(1);
         setBadges([]);
-        // Reset settings to defaults so next user gets a clean slate
         setDarkMode(false);
         setFastDuration(60);
         setSlowDuration(90);
@@ -190,7 +328,6 @@ function App() {
     return () => unsub();
   }, []);
 
-  // Init phaseTime when slowDuration changes (e.g. on first load before settings fetch)
   useEffect(() => { setPhaseTime(slowDuration); }, [slowDuration]);
 
   // ── FETCH WORKOUTS ────────────────────────────────────────────────────────
@@ -246,7 +383,7 @@ function App() {
     }
   };
 
-  // ── DARK MODE TOGGLE (saves to Firestore) ─────────────────────────────────
+  // ── DARK MODE TOGGLE ──────────────────────────────────────────────────────
   const toggleDarkMode = () => {
     const next = !darkMode;
     setDarkMode(next);
@@ -376,25 +513,25 @@ function App() {
     return hrs.length ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : null;
   })();
 
-  // ── PROFILE AVATAR ────────────────────────────────────────────────────────
-  const ProfileAvatar = ({ size = 'w-16 h-16', textSize = 'text-2xl', border = 'border-4 border-white/30' }) => {
-    const [imgFailed, setImgFailed] = useState(false);
-    if (!imgFailed && user.photoURL) {
-      return (
-        <img
-          src={user.photoURL}
-          alt="avatar"
-          className={`${size} rounded-full ${border} object-cover`}
-          onError={() => setImgFailed(true)}
-        />
-      );
-    }
-    return (
-      <div className={`${size} rounded-full ${border} bg-white/20 flex items-center justify-center ${textSize} font-black`}>
-        {user.displayName?.charAt(0).toUpperCase() || '?'}
-      </div>
-    );
+  // ── SHARED MODAL PROPS ────────────────────────────────────────────────────
+  const ratingModalProps = {
+    show: showRating,
+    darkMode,
+    card,
+    pendingRating,
+    setPendingRating,
+    heartRate,
+    setHeartRate,
+    weight,
+    setWeight,
+    notes,
+    setNotes,
+    onSave: saveWorkout,
+    onSkip: () => { setShowRating(false); resetTimer(); },
   };
+
+  // ── SHARED NAV PROPS ──────────────────────────────────────────────────────
+  const bottomNavProps = { view, setView, card };
 
   // ══════════════════════════════════════════════════════════════════════════
   // LOGIN
@@ -423,132 +560,13 @@ function App() {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // RATING MODAL
-  // ══════════════════════════════════════════════════════════════════════════
-  const RatingModal = () => (
-    <AnimatePresence>
-      {showRating && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-4"
-        >
-          <motion.div
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            exit={{ y: 100 }}
-            className={`${card} rounded-[32px] p-6 w-full max-w-md`}
-          >
-            <h2 className="font-display text-2xl font-black mb-1">Workout Complete! 🎉</h2>
-            <p className="opacity-60 text-sm mb-6">How did it feel?</p>
-
-            <div className="grid grid-cols-3 gap-3 mb-5">
-              {[
-                { key: 'easy',   emoji: '😊', label: 'Easy',   color: 'from-green-400 to-emerald-500' },
-                { key: 'medium', emoji: '😤', label: 'Medium', color: 'from-yellow-400 to-orange-500' },
-                { key: 'hard',   emoji: '🥵', label: 'Hard',   color: 'from-red-400 to-rose-600' }
-              ].map(r => (
-                <button
-                  key={r.key}
-                  onClick={() => setPendingRating(r.key)}
-                  className={`py-4 rounded-2xl font-bold transition-all ${pendingRating === r.key ? `bg-gradient-to-br ${r.color} text-white scale-105 shadow-lg` : darkMode ? 'bg-white/10' : 'bg-white/50'}`}
-                >
-                  <div className="text-2xl">{r.emoji}</div>
-                  <div className="text-xs mt-1">{r.label}</div>
-                </button>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-5">
-              <div>
-                <label className="text-xs opacity-60 mb-1 flex items-center gap-1"><Heart size={12}/> Heart Rate (bpm)</label>
-                <input
-                  type="number"
-                  value={heartRate}
-                  onChange={e => setHeartRate(e.target.value)}
-                  placeholder="e.g. 130"
-                  className={`w-full px-4 py-2 rounded-xl text-sm ${darkMode ? 'bg-white/10 text-white' : 'bg-white/70 text-slate-900'} outline-none border border-transparent focus:border-violet-400`}
-                />
-              </div>
-              <div>
-                <label className="text-xs opacity-60 mb-1 flex items-center gap-1"><Weight size={12}/> Weight (kg)</label>
-                <input
-                  type="number"
-                  value={weight}
-                  onChange={e => setWeight(e.target.value)}
-                  placeholder="e.g. 68.5"
-                  className={`w-full px-4 py-2 rounded-xl text-sm ${darkMode ? 'bg-white/10 text-white' : 'bg-white/70 text-slate-900'} outline-none border border-transparent focus:border-violet-400`}
-                />
-              </div>
-            </div>
-
-            <div className="mb-5">
-              <label className="text-xs opacity-60 mb-1 block">Notes (optional)</label>
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="How did it go? Any aches, wins, etc."
-                rows={2}
-                className={`w-full px-4 py-2 rounded-xl text-sm resize-none ${darkMode ? 'bg-white/10 text-white' : 'bg-white/70 text-slate-900'} outline-none border border-transparent focus:border-violet-400`}
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => { setShowRating(false); resetTimer(); }}
-                className="flex-1 py-3 rounded-2xl font-bold opacity-60 hover:opacity-100 transition border border-current"
-              >
-                Skip
-              </button>
-              <button
-                onClick={saveWorkout}
-                disabled={!pendingRating}
-                className={`flex-1 py-3 rounded-2xl font-bold text-white transition ${pendingRating ? 'bg-gradient-to-r from-violet-500 to-blue-500 hover:scale-105' : 'bg-gray-400 cursor-not-allowed'}`}
-              >
-                Save Workout
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // BOTTOM NAV
-  // ══════════════════════════════════════════════════════════════════════════
-  const navItems = [
-    { id: 'timer',     icon: <Timer size={18}/>,        label: 'Timer'    },
-    { id: 'dashboard', icon: <Activity size={18}/>,     label: 'Stats'    },
-    { id: 'calendar',  icon: <CalendarDays size={18}/>, label: 'Calendar' },
-    { id: 'profile',   icon: <User size={18}/>,         label: 'Profile'  },
-    { id: 'settings',  icon: <Settings size={18}/>,     label: 'Settings' },
-  ];
-
-  const BottomNav = () => (
-    <div className={`fixed bottom-4 left-4 right-4 ${card} rounded-full p-2 flex justify-around z-40`}>
-      {navItems.map(n => (
-        <button
-          key={n.id}
-          onClick={() => setView(n.id)}
-          className={`flex flex-col items-center px-3 py-2 rounded-full text-xs gap-1 transition-all ${view === n.id ? 'bg-gradient-to-r from-violet-500 to-blue-500 text-white' : 'opacity-50 hover:opacity-100'}`}
-        >
-          {n.icon}
-          <span className="hidden sm:block">{n.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-
-  // ══════════════════════════════════════════════════════════════════════════
   // TIMER VIEW
   // ══════════════════════════════════════════════════════════════════════════
   if (view === 'timer') {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center p-6 pb-28 transition-all duration-500 ${bg}`}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;600&display=swap');*{font-family:'DM Sans',sans-serif}h1,h2,h3,.font-display{font-family:'Syne',sans-serif}`}</style>
-        <RatingModal />
+        <RatingModal {...ratingModalProps} />
 
         <motion.div
           key={isFastPhase ? 'fast' : 'slow'}
@@ -618,7 +636,7 @@ function App() {
           </div>
         </div>
 
-        <BottomNav />
+        <BottomNav {...bottomNavProps} />
       </div>
     );
   }
@@ -682,7 +700,7 @@ function App() {
           )}
         </div>
 
-        {/* Stats grid — font-display removed, tabular-nums added for tighter numbers */}
+        {/* Stats grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           {[
             { icon: <Flame className="text-orange-400"/>,  value: streak,             label: 'Day Streak',      bg: 'from-orange-400/20 to-rose-400/20'  },
@@ -764,7 +782,7 @@ function App() {
           </div>
         </div>
 
-        <BottomNav />
+        <BottomNav {...bottomNavProps} />
       </div>
     );
   }
@@ -828,7 +846,7 @@ function App() {
           </div>
         </div>
 
-        <BottomNav />
+        <BottomNav {...bottomNavProps} />
       </div>
     );
   }
@@ -843,7 +861,7 @@ function App() {
 
         <div className="bg-gradient-to-br from-violet-600 to-blue-600 rounded-[28px] p-6 text-white mb-4">
           <div className="flex items-center gap-4 mb-4">
-            <ProfileAvatar />
+            <ProfileAvatar user={user} />
             <div>
               <h1 className="font-display text-2xl font-black">{user.displayName}</h1>
               <p className="opacity-70 text-sm">{user.email}</p>
@@ -909,7 +927,7 @@ function App() {
           </div>
         </div>
 
-        <BottomNav />
+        <BottomNav {...bottomNavProps} />
       </div>
     );
   }
@@ -932,7 +950,6 @@ function App() {
         setTotalTime(tempSettings.sessionMinutes * 60);
         setPhaseTime(tempSettings.slowDuration);
       }
-      // Save to Firestore so settings are per-user
       if (user) saveUserSettings(user.uid, tempSettings);
       setTempSettings(null);
     };
@@ -1033,7 +1050,7 @@ function App() {
           </button>
         </div>
 
-        <BottomNav />
+        <BottomNav {...bottomNavProps} />
       </div>
     );
   }
